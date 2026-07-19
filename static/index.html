@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F&O Stock Scanner</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1 class="title">F&O Stock Scanner</h1>
+        </div>
+
+        <!-- Authentication Check -->
+        <div id="auth-overlay" class="auth-overlay hidden">
+            <div class="auth-modal">
+                <h2>Authentication Required</h2>
+                <p>Connect your Fyers account to access the scanner</p>
+                <button id="login-btn" class="btn btn-primary">Login with Fyers</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main-content" class="main-content">
+            <!-- Top Controls Bar -->
+            <div class="controls-bar">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        class="search-input" 
+                        placeholder="Search NSE Symbol"
+                        autocomplete="off"
+                    >
+                </div>
+                
+                <div class="button-group">
+                    <button id="refresh-btn" class="btn btn-icon" title="Refresh data">
+                        🔄 Refresh
+                    </button>
+                    <button id="export-btn" class="btn btn-icon" title="Export to Excel">
+                        📥 Export Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="divider"></div>
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <span id="status-text" class="status-text">Loading data...</span>
+                <span id="row-count" class="row-count"></span>
+            </div>
+
+            <!-- Data Table -->
+            <div class="table-container">
+                <table id="data-table" class="data-table">
+                    <thead>
+                        <tr>
+                            <th class="col-symbol">NSE Symbol</th>
+                            <th class="col-price">Spot</th>
+                            <th class="col-price">Future1</th>
+                            <th class="col-price">Future2</th>
+                            <th class="col-price">Future3</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <tr class="loading-row">
+                            <td colspan="5" class="loading-text">Loading data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination (if needed) -->
+            <div class="pagination">
+                <button id="prev-btn" class="btn btn-pagination" disabled>← Previous</button>
+                <span id="page-info" class="page-info">Page 1 of 1</span>
+                <button id="next-btn" class="btn btn-pagination" disabled>Next →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
