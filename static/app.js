@@ -67,8 +67,11 @@ function showAuthOverlay(authUrl) {
     mainContent.style.opacity = '0.5';
     mainContent.style.pointerEvents = 'none';
     
-    if (authUrl && loginBtn) {
-        loginBtn.onclick = () => window.location.href = authUrl;
+    // बटन क्लिक पर /auth/login पर डायरेक्ट रीडायरेक्ट करें
+    if (loginBtn) {
+        loginBtn.onclick = () => {
+            window.location.href = '/auth/login';
+        };
     }
 }
 
