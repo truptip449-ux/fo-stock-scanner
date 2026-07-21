@@ -30,7 +30,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize managers with Environment variables
 FYERS_CLIENT_ID = os.getenv("FYERS_CLIENT_ID", "")
 FYERS_SECRET_KEY = os.getenv("FYERS_SECRET_KEY", "")
 FYERS_REDIRECT_URI = os.getenv("FYERS_REDIRECT_URI", "")
@@ -49,7 +48,22 @@ except Exception as e:
     logger.warning(f"Static files mount notice: {e}")
 
 @app.get("/", response_class=HTMLResponse)
-async def root():
+async def root(request: Request, auth_code: str = None, code: str = None):
+    """
+    अगर Fyers सीधे होमपेज पर auth_code या code भेजता है,
+    तो उसे यहीं टोकन में एक्सचेंज कर लिया जाएगा।
+    """
+    received_code = auth_code or code or request.query_params.get("auth_code") or request.query_params.get("code")
+    
+    if received_code and not fyers_auth.is_authenticated():
+        try:
+            logger.info("Received auth code on root URL. Exchanging for token...")
+            await fyers_auth.exchange_code_for_token(received_code)
+            # क्लीन URL पर भेजें ताकि पैरामीटर्स हट जाएं
+            return RedirectResponse(url="/")
+        except Exception as e:
+            logger.error(f"Token exchange failed on root: {e}")
+
     try:
         with open("static/index.html", "r", encoding="utf-8") as f:
             return f.read()
@@ -58,25 +72,23 @@ async def root():
 
 @app.get("/auth/login")
 async def auth_login():
-    """सीधे Fyers लॉगिन पेज पर Redirect करेगा"""
     auth_url = fyers_auth.get_auth_url()
     return RedirectResponse(url=auth_url)
 
 @app.get("/auth/callback")
-async def auth_callback(auth_code: str = None, auth_code_param: str = None, code: str = None, s: str = None):
-    """Fyers लॉगिन के बाद वापस इसी एंडपॉइंट पर कोड भेजेगा"""
-    received_code = auth_code or auth_code_param or code
+async def auth_callback(request: Request, auth_code: str = None, code: str = None):
+    received_code = auth_code or code or request.query_params.get("auth_code") or request.query_params.get("code")
     
     if not received_code:
-        raise HTTPException(status_code=400, detail="Missing auth_code parameter from Fyers")
+        # अगर कोई पैरामीटर नहीं मिला तो सीधे होमपेज पर भेजें
+        return RedirectResponse(url="/")
     
     try:
         await fyers_auth.exchange_code_for_token(received_code)
-        # लॉगिन के बाद मुख्य वेबसाइट पर भेज दें
         return RedirectResponse(url="/")
     except Exception as e:
         logger.error(f"Auth callback error: {e}")
-        raise HTTPException(status_code=400, detail=f"Authentication failed: {str(e)}")
+        return RedirectResponse(url="/")
 
 @app.post("/api/refresh")
 async def refresh_data():
