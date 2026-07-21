@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Fyers OAuth Authentication Manager with File Persistence
+Fyers OAuth Authentication Manager
+Robust File-based Token Storage for Cloud Hosting (Render)
 """
 
 import os
@@ -10,7 +11,8 @@ from fyers_apiv3 import fyersModel
 
 logger = logging.getLogger(__name__)
 
-TOKEN_FILE = "fyers_token.json"
+# Render / Cloud safe temp path
+TOKEN_FILE = "/tmp/fyers_token.json" if os.path.exists("/tmp") else "fyers_token.json"
 
 class FyersAuthManager:
     def __init__(self, client_id: str, secret_key: str, redirect_uri: str):
@@ -20,27 +22,25 @@ class FyersAuthManager:
         self.access_token = self._load_token_from_file()
 
     def _load_token_from_file(self):
-        """फ़ाइल से टोकन लोड करता है"""
         if os.path.exists(TOKEN_FILE):
             try:
                 with open(TOKEN_FILE, "r") as f:
                     data = json.load(f)
                     token = data.get("access_token")
                     if token:
-                        logger.info("Found saved access token from file!")
+                        logger.info("Access token successfully restored from file!")
                         return token
             except Exception as e:
                 logger.error(f"Error reading token file: {e}")
         return None
 
     def _save_token_to_file(self, token: str):
-        """टोकन को फ़ाइल में सेव करता है"""
         try:
             with open(TOKEN_FILE, "w") as f:
                 json.dump({"access_token": token}, f)
-            logger.info("Access token saved to file.")
+            logger.info(f"Access token persisted to {TOKEN_FILE}")
         except Exception as e:
-            logger.error(f"Error saving token file: {e}")
+            logger.error(f"Error writing token file: {e}")
 
     def get_auth_url(self) -> str:
         session = fyersModel.SessionModel(
@@ -68,8 +68,8 @@ class FyersAuthManager:
             self._save_token_to_file(self.access_token)
             return self.access_token
         else:
-            logger.error(f"Token exchange error: {response}")
-            raise Exception(response.get("message", "Token Generation Failed"))
+            logger.error(f"Fyers Token Generation Failed: {response}")
+            raise Exception(response.get("message", "Token Exchange Failed"))
 
     def is_authenticated(self) -> bool:
         if not self.access_token:
@@ -88,5 +88,5 @@ class FyersAuthManager:
         return fyersModel.FyersModel(
             client_id=self.client_id,
             token=token,
-            log_path=os.getcwd()
+            log_path="/tmp" if os.path.exists("/tmp") else os.getcwd()
         )
