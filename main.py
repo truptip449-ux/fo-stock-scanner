@@ -70,7 +70,7 @@ async def root(request: Request):
 @app.get("/auth/login")
 async def auth_login():
     auth_url = fyers_auth.get_auth_url()
-    return {"status": "ok", "auth_url": auth_url}
+    return RedirectResponse(url=auth_url)
 
 @app.get("/auth/callback")
 async def auth_callback(request: Request):
