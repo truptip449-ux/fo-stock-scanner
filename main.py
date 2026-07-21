@@ -48,16 +48,18 @@ except Exception as e:
     logger.warning(f"Static files mount notice: {e}")
 
 @app.get("/", response_class=HTMLResponse)
-async def root(request: Request, auth_code: str = None, code: str = None, s: str = None):
-    received_code = auth_code or code or request.query_params.get("auth_code") or request.query_params.get("code")
+async def root(request: Request):
+    # Fetch parameters from query string
+    params = request.query_params
+    received_code = params.get("auth_code") or params.get("code")
     
     if received_code:
         try:
-            logger.info("Found auth code on homepage, generating token...")
+            logger.info("Root endpoint received auth code. Exchanging token...")
             await fyers_auth.exchange_code_for_token(received_code)
             return RedirectResponse(url="/")
         except Exception as e:
-            logger.error(f"Error exchanging code on root: {e}")
+            logger.error(f"Error exchanging token on root: {e}")
 
     try:
         with open("static/index.html", "r", encoding="utf-8") as f:
@@ -68,17 +70,18 @@ async def root(request: Request, auth_code: str = None, code: str = None, s: str
 @app.get("/auth/login")
 async def auth_login():
     auth_url = fyers_auth.get_auth_url()
-    return RedirectResponse(url=auth_url)
+    return {"status": "ok", "auth_url": auth_url}
 
 @app.get("/auth/callback")
-async def auth_callback(request: Request, auth_code: str = None, code: str = None):
-    received_code = auth_code or code or request.query_params.get("auth_code") or request.query_params.get("code")
+async def auth_callback(request: Request):
+    params = request.query_params
+    received_code = params.get("auth_code") or params.get("code")
     
     if received_code:
         try:
             await fyers_auth.exchange_code_for_token(received_code)
         except Exception as e:
-            logger.error(f"Callback error: {e}")
+            logger.error(f"Callback process error: {e}")
             
     return RedirectResponse(url="/")
 
@@ -125,9 +128,10 @@ async def export_to_excel():
 
 @app.get("/api/auth-status")
 async def auth_status():
+    is_auth = fyers_auth.is_authenticated()
     return {
-        "authenticated": fyers_auth.is_authenticated(),
-        "auth_url": "/auth/login"
+        "authenticated": is_auth,
+        "auth_url": fyers_auth.get_auth_url() if not is_auth else None
     }
 
 @app.get("/health")
