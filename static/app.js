@@ -47,10 +47,12 @@ async function checkAuthentication() {
     }
 }
 
-function showAuthOverlay() {
-    authOverlay.classList.remove('hidden');
-    mainContent.style.opacity = '0.3';
-    mainContent.style.pointerEvents = 'none';
+function showAuthOverlay(authUrl) {
+    if (authOverlay) authOverlay.classList.remove('hidden');
+    if (mainContent) {
+        mainContent.style.opacity = '0.2';
+        mainContent.style.pointerEvents = 'none';
+    }
     
     if (loginBtn) {
         loginBtn.onclick = () => {
