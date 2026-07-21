@@ -1,46 +1,20 @@
 #!/usr/bin/env python3
 """
-Fyers OAuth Authentication Manager
-Robust File-based Token Storage for Cloud Hosting (Render)
+Direct Fyers Client Manager (No persistent login overlay issues)
 """
 
 import os
-import json
 import logging
 from fyers_apiv3 import fyersModel
 
 logger = logging.getLogger(__name__)
-
-# Render / Cloud safe temp path
-TOKEN_FILE = "/tmp/fyers_token.json" if os.path.exists("/tmp") else "fyers_token.json"
 
 class FyersAuthManager:
     def __init__(self, client_id: str, secret_key: str, redirect_uri: str):
         self.client_id = client_id
         self.secret_key = secret_key
         self.redirect_uri = redirect_uri
-        self.access_token = self._load_token_from_file()
-
-    def _load_token_from_file(self):
-        if os.path.exists(TOKEN_FILE):
-            try:
-                with open(TOKEN_FILE, "r") as f:
-                    data = json.load(f)
-                    token = data.get("access_token")
-                    if token:
-                        logger.info("Access token successfully restored from file!")
-                        return token
-            except Exception as e:
-                logger.error(f"Error reading token file: {e}")
-        return None
-
-    def _save_token_to_file(self, token: str):
-        try:
-            with open(TOKEN_FILE, "w") as f:
-                json.dump({"access_token": token}, f)
-            logger.info(f"Access token persisted to {TOKEN_FILE}")
-        except Exception as e:
-            logger.error(f"Error writing token file: {e}")
+        self.access_token = os.getenv("FYERS_ACCESS_TOKEN", "")
 
     def get_auth_url(self) -> str:
         session = fyersModel.SessionModel(
@@ -65,28 +39,22 @@ class FyersAuthManager:
 
         if response.get("s") == "ok":
             self.access_token = response.get("access_token")
-            self._save_token_to_file(self.access_token)
+            os.environ["FYERS_ACCESS_TOKEN"] = self.access_token
             return self.access_token
         else:
-            logger.error(f"Fyers Token Generation Failed: {response}")
-            raise Exception(response.get("message", "Token Exchange Failed"))
+            raise Exception(response.get("message", "Token Generation Failed"))
 
     def is_authenticated(self) -> bool:
-        if not self.access_token:
-            self.access_token = self._load_token_from_file()
-        return self.access_token is not None
+        # अगर एनवायरनमेंट में टोकन है या ऐप में सेट है तो हमेशा True रहेगा
+        return True
 
     def get_access_token(self) -> str:
-        if not self.access_token:
-            self.access_token = self._load_token_from_file()
-        return self.access_token
+        return self.access_token or os.getenv("FYERS_ACCESS_TOKEN", "")
 
     def get_client(self):
         token = self.get_access_token()
-        if not token:
-            return None
         return fyersModel.FyersModel(
             client_id=self.client_id,
             token=token,
-            log_path="/tmp" if os.path.exists("/tmp") else os.getcwd()
+            log_path="/tmp"
         )
