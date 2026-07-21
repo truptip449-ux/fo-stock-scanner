@@ -6,7 +6,7 @@ F&O Stock Scanner - FastAPI Backend
 import os
 import logging
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import RedirectResponse, HTMLResponse, FileResponse, JSONResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -48,21 +48,16 @@ except Exception as e:
     logger.warning(f"Static files mount notice: {e}")
 
 @app.get("/", response_class=HTMLResponse)
-async def root(request: Request, auth_code: str = None, code: str = None):
-    """
-    अगर Fyers सीधे होमपेज पर auth_code या code भेजता है,
-    तो उसे यहीं टोकन में एक्सचेंज कर लिया जाएगा।
-    """
+async def root(request: Request, auth_code: str = None, code: str = None, s: str = None):
     received_code = auth_code or code or request.query_params.get("auth_code") or request.query_params.get("code")
     
-    if received_code and not fyers_auth.is_authenticated():
+    if received_code:
         try:
-            logger.info("Received auth code on root URL. Exchanging for token...")
+            logger.info("Found auth code on homepage, generating token...")
             await fyers_auth.exchange_code_for_token(received_code)
-            # क्लीन URL पर भेजें ताकि पैरामीटर्स हट जाएं
             return RedirectResponse(url="/")
         except Exception as e:
-            logger.error(f"Token exchange failed on root: {e}")
+            logger.error(f"Error exchanging code on root: {e}")
 
     try:
         with open("static/index.html", "r", encoding="utf-8") as f:
@@ -79,16 +74,13 @@ async def auth_login():
 async def auth_callback(request: Request, auth_code: str = None, code: str = None):
     received_code = auth_code or code or request.query_params.get("auth_code") or request.query_params.get("code")
     
-    if not received_code:
-        # अगर कोई पैरामीटर नहीं मिला तो सीधे होमपेज पर भेजें
-        return RedirectResponse(url="/")
-    
-    try:
-        await fyers_auth.exchange_code_for_token(received_code)
-        return RedirectResponse(url="/")
-    except Exception as e:
-        logger.error(f"Auth callback error: {e}")
-        return RedirectResponse(url="/")
+    if received_code:
+        try:
+            await fyers_auth.exchange_code_for_token(received_code)
+        except Exception as e:
+            logger.error(f"Callback error: {e}")
+            
+    return RedirectResponse(url="/")
 
 @app.post("/api/refresh")
 async def refresh_data():
